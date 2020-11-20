@@ -79,11 +79,6 @@ func newCacheKey(params Parameter) string {
 
 // execute 执行API接口
 func execute(param Parameter) (bytes []byte, err error) {
-	err = checkConfig()
-	if err != nil {
-		return
-	}
-
 	var req *http.Request
 	req, err = http.NewRequest("POST", Router, strings.NewReader(param.getRequestData()))
 	if err != nil {
@@ -111,10 +106,17 @@ func execute(param Parameter) (bytes []byte, err error) {
 func Execute(method string, param Parameter, appConfigs ...string) (res *simplejson.Json, err error) {
 	param["method"] = method
 
+	appKey := AppKey
+	appSecret := AppSecret
 	if len(appConfigs) == 2 {
-		param.setRequestData(appConfigs[0], appConfigs[1])
-	} else {
-		param.setRequestData("", "")
+		appKey = appConfigs[0]
+		appSecret = appConfigs[1]
+	}
+	param.setRequestData(appKey, appSecret)
+
+	err = checkConfig(appKey, appSecret)
+	if err != nil {
+		return
 	}
 
 	var bodyBytes []byte
@@ -160,6 +162,10 @@ func ExecuteCache(method string, param Parameter) (res *simplejson.Json, err err
 		}
 	}
 
+	if err != nil {
+		return
+	}
+
 	var bodyBytes []byte
 	bodyBytes, err = execute(param)
 	if err != nil {
@@ -178,11 +184,11 @@ func ExecuteCache(method string, param Parameter) (res *simplejson.Json, err err
 }
 
 // 检查配置
-func checkConfig() error {
-	if AppKey == "" {
+func checkConfig(appKey, appSecret string) error {
+	if AppKey == "" && appKey == "" {
 		return errors.New("AppKey 不能为空")
 	}
-	if AppSecret == "" {
+	if AppSecret == "" && appSecret == "" {
 		return errors.New("AppSecret 不能为空")
 	}
 	if Router == "" {
