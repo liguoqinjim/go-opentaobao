@@ -1,4 +1,4 @@
-module github.com/nilorg/go-opentaobao
+module github.com/liguoqinjim/go-opentaobao
 
 go 1.13
 

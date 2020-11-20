@@ -17,7 +17,7 @@ import (
 	"time"
 
 	simplejson "github.com/bitly/go-simplejson"
-	"github.com/nilorg/go-opentaobao/cache"
+	"github.com/liguoqinjim/go-opentaobao/cache"
 	"github.com/nilorg/sdk/convert"
 )
 
@@ -108,9 +108,14 @@ func execute(param Parameter) (bytes []byte, err error) {
 }
 
 // Execute 执行API接口
-func Execute(method string, param Parameter) (res *simplejson.Json, err error) {
+func Execute(method string, param Parameter, appConfigs ...string) (res *simplejson.Json, err error) {
 	param["method"] = method
-	param.setRequestData()
+
+	if len(appConfigs) == 2 {
+		param.setRequestData(appConfigs[0], appConfigs[1])
+	} else {
+		param.setRequestData("", "")
+	}
 
 	var bodyBytes []byte
 	bodyBytes, err = execute(param)
@@ -141,7 +146,7 @@ func bytesToResult(bytes []byte) (res *simplejson.Json, err error) {
 // ExecuteCache 执行API接口，缓存
 func ExecuteCache(method string, param Parameter) (res *simplejson.Json, err error) {
 	param["method"] = method
-	param.setRequestData()
+	param.setRequestData("", "")
 
 	cacheKey := newCacheKey(param)
 	// 获取缓存
@@ -186,12 +191,16 @@ func checkConfig() error {
 	return nil
 }
 
-func (p Parameter) setRequestData() {
+func (p Parameter) setRequestData(appKey, appSecret string) {
 	hh, _ := time.ParseDuration("8h")
 	loc := time.Now().UTC().Add(hh)
 	p["timestamp"] = strconv.FormatInt(loc.Unix(), 10)
 	p["format"] = "json"
-	p["app_key"] = AppKey
+	if appKey == "" {
+		p["app_key"] = AppKey
+	} else {
+		p["app_key"] = appKey
+	}
 	p["v"] = "2.0"
 	p["sign_method"] = "md5"
 	p["partner_id"] = "Nilorg"
@@ -199,7 +208,7 @@ func (p Parameter) setRequestData() {
 		p["session"] = Session
 	}
 	// 设置签名
-	p["sign"] = getSign(p)
+	p["sign"] = getSign(p, appSecret)
 }
 
 // 获取请求数据
@@ -214,7 +223,7 @@ func (p Parameter) getRequestData() string {
 }
 
 // 获取签名
-func getSign(params Parameter) string {
+func getSign(params Parameter, appSecret string) string {
 	// 获取Key
 	keys := []string{}
 	for k := range params {
@@ -223,7 +232,12 @@ func getSign(params Parameter) string {
 	// 排序asc
 	sort.Strings(keys)
 	// 把所有参数名和参数值串在一起
-	query := bytes.NewBufferString(AppSecret)
+	var query *bytes.Buffer
+	if appSecret == "" {
+		query = bytes.NewBufferString(AppSecret)
+	} else {
+		query = bytes.NewBufferString(appSecret)
+	}
 	for _, k := range keys {
 		query.WriteString(k)
 		query.WriteString(interfaceToString(params[k]))
