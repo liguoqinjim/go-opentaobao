@@ -202,11 +202,7 @@ func (p Parameter) setRequestData(appKey, appSecret string) {
 	loc := time.Now().UTC().Add(hh)
 	p["timestamp"] = strconv.FormatInt(loc.Unix(), 10)
 	p["format"] = "json"
-	if appKey == "" {
-		p["app_key"] = AppKey
-	} else {
-		p["app_key"] = appKey
-	}
+	p["app_key"] = appKey
 	p["v"] = "2.0"
 	p["sign_method"] = "md5"
 	p["partner_id"] = "Nilorg"
@@ -238,17 +234,12 @@ func getSign(params Parameter, appSecret string) string {
 	// 排序asc
 	sort.Strings(keys)
 	// 把所有参数名和参数值串在一起
-	var query *bytes.Buffer
-	if appSecret == "" {
-		query = bytes.NewBufferString(AppSecret)
-	} else {
-		query = bytes.NewBufferString(appSecret)
-	}
+	query := bytes.NewBufferString(appSecret)
 	for _, k := range keys {
 		query.WriteString(k)
 		query.WriteString(interfaceToString(params[k]))
 	}
-	query.WriteString(AppSecret)
+	query.WriteString(appSecret)
 	// 使用MD5加密
 	h := md5.New()
 	io.Copy(h, query)
